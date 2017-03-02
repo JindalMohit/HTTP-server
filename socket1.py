@@ -4,11 +4,11 @@ import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
 
 # get the local machine name
-host = socket.gethostname();
+host = '172.25.14.62';
 # host is basically my pc name: mohit-HP-15-Notebook-PC
 
 # set a port for connection
-port = 9999
+port = 8000
 
 # bind socket to the port
 s.bind((host, port))
