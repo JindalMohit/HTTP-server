@@ -4,6 +4,7 @@ import time   # current time
 
 # create a new socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # get the local machine name
 host = '172.25.14.62';
