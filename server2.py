@@ -14,7 +14,8 @@ class Server(object):
 		self.th = False
 
 	def activate_server(self):
-		#create a socket
+		while not self.th:
+			pass
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		# assign a port to the socket
@@ -30,7 +31,6 @@ class Server(object):
 		self.output += "Server successfully acquired the socket with port:" + str(self.port)
 		print("Press ctrl+c to close the server.")
 		self.output += "Press ctrl+c to close the server."
-		self.th = True
 		self.listen_client()
 
 	def deactivate_server(self):
@@ -64,6 +64,12 @@ class Server(object):
 
 			c_socket.close()
 
+			if  not self.th:
+				break
+		while not self.th:
+			pass
+		self.listen_client()
+
 	def get_response_header(self, http_version, status_code):
 		h = http_version + " "
 		if(status_code == 200):
@@ -73,7 +79,7 @@ class Server(object):
 		return h.encode()
 
 	def handle_request(self, client_socket, client_data):
-			data = client_data.split(" ")
+			data = client_data.split( )
 			request_method = data[0]
 			
 			try:
@@ -148,16 +154,14 @@ class Gui():
 		else:
 			print("Starting HTTP server")
 			try:
-				thread_server.start()
+				s.th = True
 			except Exception as e:
 				print (e)
 	def restart_handler(self, widget):
 		pass
 	def stop_handler(self, widget):
 		if(s.is_activated()):
-			cond = threading.Condition()
-			while cond:
-				cond.wait()
+			s.deactivate_server()
 	def end_handler(self, widget):
 		sys.exit()
 
@@ -167,3 +171,4 @@ o1 = Gui()
 thread_gui = Thread(name='thread_gui', target=gtk.main, args=())
 thread_server = Thread(name='thread_server', target=s.activate_server, args=())
 thread_gui.start()
+thread_server.start()
