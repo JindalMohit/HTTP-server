@@ -7,6 +7,8 @@ from gi.repository import Gtk as gtk
 import threading
 from threading import Thread
 
+sys.settrace
+
 output = ""
 
 class Server(object):
@@ -25,15 +27,15 @@ class Server(object):
 		# assign a port to the socket
 		try:
 			self.socket.bind((self.host, self.port))
-			print("Launching HTTP server at ", self.host, ":", self.port)
+			#print("Launching HTTP server at ", self.host, ":", self.port)
 			output += "Launching HTTP server at " +str(self.host) + ":" + str(self.port) + "\n"
 		except Exception as e:
 			print (e)
 			output += str(e) + "\n"
 			sys.exit()
-		print("Server successfully acquired the socket with port:", self.port)
+		#print("Server successfully acquired the socket with port:", self.port)
 		output += "Server successfully acquired the socket with port:" + str(self.port) + "\n"
-		print("Press ctrl+c to close the server.")
+		#print("Press ctrl+c to close the server.")
 		output += "Press ctrl+c to close the server.\n"
 		o1.update()
 		self.listen_client()
@@ -55,64 +57,86 @@ class Server(object):
 		self.socket.listen(n)
 		global output
 		while True:
+			output = ""
 			# now a request from a client for a connection has arrived
 			# accept the connection
 			c_socket, c_addr = self.socket.accept()
-			print("Got a connection from ", c_addr)
+			#print("Got a connection from ", c_addr)
 			output += "Got a connection from " + str(c_addr) + "\n"
+			
 			#msg = "Thank you for connecting\n"
 			#c_socket.send(msg.encode('ascii'))
 
 			# extract the data from the client socket
-			print ("hello")
+			#print ("hello")
 			data = c_socket.recv(1024)
-			print(data.decode('ascii'))
-			output += data.decode('ascii') + "\n"
-
+			#print(data.decode('ascii'))
+			
 			self.handle_request(c_socket, data)
 
 			c_socket.close()
-			o1.update()
+			try:
+				o1.update()
+			except Exception as e:
+				print(e)
+
 			if  not self.th:
 				break
+
 		while not self.th:
 			pass
 		self.listen_client()
 
 	def get_response_header(self, http_version, status_code):
 		global output
-		h = http_version + " "
-		if(status_code == 200):
-			h += "200 OK\n"
-		elif(status_code == 404):
-			h += "404 Not Found\n"
+		h = http_version + " " + status_code
 		return h.encode()
 
 	def handle_request(self, client_socket, client_data):
 		global output
 		data = client_data.split( )
-		print(data)
-		request_method = data[0]
+		#print(data.decode('ascii'))
+		request_method = ""
+		request_path = "/"
+		http_version = ""
 		
 		try:
-			request_path = data[1]
+			request_method = data[0].decode('utf-8')
 		except Exception as e:
 			print (e)
 		try:
-			http_version = data[2]
+			request_path = data[1].decode('utf-8')
+		except Exception as e:
+			print (e)
+		try:
+			http_version = data[2].decode('utf-8')
 		except Exception as e:
 			print (e)
 
+		try:
+			#print(request_method.decode('utf-8'))
+			output += "Request Method: " + request_method + "\n"
+		except Exception as e:
+			print(e)
+		try:
+			output += "Request Path: " + request_path + "\n"
+		except Exception as e:
+			print(e)
+		o1.update()
+
 		if(request_method == 'GET'):
+			if(request_path == '/' or request_path== '/favicon.ico'):
+				request_path = "/index.html"
+			print("Request Path: %s" %request_path)
 			path = 'Resources' + request_path
 			msg = ""
 			try:
 				File = open(path, 'rb')
-				msg += self.get_response_header(http_version, 200)
+				msg += self.get_response_header(http_version, "200 OK")
 				msg += File.read()
 				File.close()
 			except Exception as e:
-				msg += self.get_response_header(http_version, 404)
+				msg += self.get_response_header(http_version, "ERROR 404! FILE NOT FOUND")
 			
 			client_socket.send(msg)
 
@@ -165,36 +189,40 @@ class Gui():
 
 	def update(self):
 		self.text.set_text(output)
-		self.board.set_buffer(self.text)		
+		self.board.set_buffer(self.text)
+		#pass
 
 
 	def start_handler(self, widget):
 		global output
 		if(s.is_activated()):
-			print("Server is already started")
+			#print("Server is already started")
 			output += "Server is already started\n"
 		else:
-			print("Starting HTTP server")
+			#print("Starting HTTP server")
 			output += "Starting HTTP server\n"
 			try:
 				s.th = True
 			except Exception as e:
 				print (e)
 		self.update()
+
 	def restart_handler(self, widget):
 		global output
 		pass
 		self.update()
+
 	def stop_handler(self, widget):
 		global output
 		if(s.is_activated()):
 			s.deactivate_server()
-			print("Server is stopped.")
+			#print("Server is stopped.")
 			output += "Server is stopped.\n"
 		else:
-			print("No server is active.")
+			#print("No server is active.")
 			output += "No server is active.\n"
 		self.update()
+
 	def end_handler(self, widget):
 		global output
 		self.update()
