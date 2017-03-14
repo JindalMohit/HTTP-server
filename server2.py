@@ -1,19 +1,23 @@
 # HTTP server using object-oriented approach
 import socket
 import sys
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk as gtk
 import threading
 from threading import Thread
+
+output = ""
 
 class Server(object):
 	"""docstring for Server"""
 	def __init__(self, port = 8000):
 		self.host = '127.0.0.1'
 		self.port = port
-		self.output = ""
 		self.th = False
 
 	def activate_server(self):
+		global output
 		while not self.th:
 			pass
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -22,35 +26,39 @@ class Server(object):
 		try:
 			self.socket.bind((self.host, self.port))
 			print("Launching HTTP server at ", self.host, ":", self.port)
-			self.output += "Launching HTTP server at " +str(self.host) + ":" + str(self.port)
+			output += "Launching HTTP server at " +str(self.host) + ":" + str(self.port)
 		except Exception as e:
 			print (e)
-			self.output += str(e)
+			output += str(e)
 			sys.exit()
 		print("Server successfully acquired the socket with port:", self.port)
-		self.output += "Server successfully acquired the socket with port:" + str(self.port)
+		output += "Server successfully acquired the socket with port:" + str(self.port)
 		print("Press ctrl+c to close the server.")
-		self.output += "Press ctrl+c to close the server."
+		output += "Press ctrl+c to close the server."
 		self.listen_client()
 
 	def deactivate_server(self):
+		global output
 		if(self.th):
 			self.th = False
 
 	def is_activated(self):
+		global output
 		return self.th
 
 	def listen_client(self):
+		global output
 		# start TCP listen
 		# set no. of requests in queue
 		n = 5
 		self.socket.listen(n)
+		global output
 		while True:
 			# now a request from a client for a connection has arrived
 			# accept the connection
 			c_socket, c_addr = self.socket.accept()
 			print("Got a connection from ", c_addr)
-			self.output += "Got a connection from " + str(c_addr)
+			output += "Got a connection from " + str(c_addr)
 			#msg = "Thank you for connecting\n"
 			#c_socket.send(msg.encode('ascii'))
 
@@ -58,7 +66,7 @@ class Server(object):
 			print ("hello")
 			data = c_socket.recv(1024)
 			print(data.decode('ascii'))
-			self.output += data.decode('ascii')
+			output += data.decode('ascii')
 
 			self.handle_request(c_socket, data)
 
@@ -71,6 +79,7 @@ class Server(object):
 		self.listen_client()
 
 	def get_response_header(self, http_version, status_code):
+		global output
 		h = http_version + " "
 		if(status_code == 200):
 			h += "200 OK\n"
@@ -79,30 +88,32 @@ class Server(object):
 		return h.encode()
 
 	def handle_request(self, client_socket, client_data):
-			data = client_data.split( )
-			request_method = data[0]
-			
-			try:
-				request_path = data[1]
-			except Exception as e:
-				print (e)
-			try:
-				http_version = data[2]
-			except Exception as e:
-				print (e)
+		global output
+		data = client_data.split( )
+		print(data)
+		request_method = data[0]
+		
+		try:
+			request_path = data[1]
+		except Exception as e:
+			print (e)
+		try:
+			http_version = data[2]
+		except Exception as e:
+			print (e)
 
-			if(request_method == 'GET'):
-				path = 'Resources' + request_path
-				msg = ""
-				try:
-					File = open(path, 'rb')
-					msg += self.get_response_header(http_version, 200)
-					msg += File.read()
-					File.close()
-				except Exception as e:
-					msg += self.get_response_header(http_version, 404)
-				
-				client_socket.send(msg)
+		if(request_method == 'GET'):
+			path = 'Resources' + request_path
+			msg = ""
+			try:
+				File = open(path, 'rb')
+				msg += self.get_response_header(http_version, 200)
+				msg += File.read()
+				File.close()
+			except Exception as e:
+				msg += self.get_response_header(http_version, 404)
+			
+			client_socket.send(msg)
 
 
 class Gui():
@@ -113,8 +124,10 @@ class Gui():
 		self.frame.set_title("HTTP-Server")
 		self.add_buttons()
 		self.place_widgets()
+		global output
 
 	def add_buttons(self):
+		global output
 		self.start_b = gtk.Button("Start")
 		self.start_b.set_size_request(70, 30)
 		self.start_b.connect("clicked", self.start_handler)
@@ -126,6 +139,7 @@ class Gui():
 		self.end_b.connect("clicked", self.end_handler)
 
 	def place_widgets(self, str="Welcome"):
+		global output
 		self.vb = gtk.VBox(False, 1)
 		self.vb.add(self.start_b)
 		self.vb.add(self.restart_b)
@@ -149,20 +163,29 @@ class Gui():
 		self.frame.show_all()
 
 	def start_handler(self, widget):
+		global output
 		if(s.is_activated()):
 			print("Server is already started")
+			output += "Server is already started"
 		else:
 			print("Starting HTTP server")
+			output += "Starting HTTP server"
 			try:
 				s.th = True
 			except Exception as e:
 				print (e)
 	def restart_handler(self, widget):
+		global output
 		pass
 	def stop_handler(self, widget):
+		global output
 		if(s.is_activated()):
 			s.deactivate_server()
+			print("Server is stopped.")
+		else:
+			print("No server is active.")
 	def end_handler(self, widget):
+		global output
 		sys.exit()
 
 
