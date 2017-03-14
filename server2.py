@@ -26,15 +26,16 @@ class Server(object):
 		try:
 			self.socket.bind((self.host, self.port))
 			print("Launching HTTP server at ", self.host, ":", self.port)
-			output += "Launching HTTP server at " +str(self.host) + ":" + str(self.port)
+			output += "Launching HTTP server at " +str(self.host) + ":" + str(self.port) + "\n"
 		except Exception as e:
 			print (e)
-			output += str(e)
+			output += str(e) + "\n"
 			sys.exit()
 		print("Server successfully acquired the socket with port:", self.port)
-		output += "Server successfully acquired the socket with port:" + str(self.port)
+		output += "Server successfully acquired the socket with port:" + str(self.port) + "\n"
 		print("Press ctrl+c to close the server.")
-		output += "Press ctrl+c to close the server."
+		output += "Press ctrl+c to close the server.\n"
+		o1.update()
 		self.listen_client()
 
 	def deactivate_server(self):
@@ -58,7 +59,7 @@ class Server(object):
 			# accept the connection
 			c_socket, c_addr = self.socket.accept()
 			print("Got a connection from ", c_addr)
-			output += "Got a connection from " + str(c_addr)
+			output += "Got a connection from " + str(c_addr) + "\n"
 			#msg = "Thank you for connecting\n"
 			#c_socket.send(msg.encode('ascii'))
 
@@ -66,12 +67,12 @@ class Server(object):
 			print ("hello")
 			data = c_socket.recv(1024)
 			print(data.decode('ascii'))
-			output += data.decode('ascii')
+			output += data.decode('ascii') + "\n"
 
 			self.handle_request(c_socket, data)
 
 			c_socket.close()
-
+			o1.update()
 			if  not self.th:
 				break
 		while not self.th:
@@ -156,36 +157,47 @@ class Gui():
 		#str = "Yipee! Finally working."
 		
 		#modify next 2 lines
-		#self.text.set_text(str.encode('utf-8'))
-		#self.board.set_buffer(self.text)
+		self.text.set_text(output)
+		self.board.set_buffer(self.text)
 
 		self.frame.add(self.hb)
 		self.frame.show_all()
+
+	def update(self):
+		self.text.set_text(output)
+		self.board.set_buffer(self.text)		
+
 
 	def start_handler(self, widget):
 		global output
 		if(s.is_activated()):
 			print("Server is already started")
-			output += "Server is already started"
+			output += "Server is already started\n"
 		else:
 			print("Starting HTTP server")
-			output += "Starting HTTP server"
+			output += "Starting HTTP server\n"
 			try:
 				s.th = True
 			except Exception as e:
 				print (e)
+		self.update()
 	def restart_handler(self, widget):
 		global output
 		pass
+		self.update()
 	def stop_handler(self, widget):
 		global output
 		if(s.is_activated()):
 			s.deactivate_server()
 			print("Server is stopped.")
+			output += "Server is stopped.\n"
 		else:
 			print("No server is active.")
+			output += "No server is active.\n"
+		self.update()
 	def end_handler(self, widget):
 		global output
+		self.update()
 		sys.exit()
 
 
