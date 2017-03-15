@@ -136,8 +136,12 @@ class Server(object):
 				msg += File.read()
 				File.close()
 			except Exception as e:
+				path = 'Resources/error.html'
+				File = open(path, 'rb')
 				msg += self.get_response_header(http_version, "ERROR 404! FILE NOT FOUND")
-			
+				msg += File.read()
+				File.close()
+
 			client_socket.send(msg)
 
 
