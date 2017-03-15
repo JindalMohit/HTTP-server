@@ -125,24 +125,35 @@ class Server(object):
 		o1.update()
 
 		if(request_method == 'GET'):
-			if(request_path == '/' or request_path== '/favicon.ico'):
+			if(request_path == '/'):
 				request_path = "/index.html"
 			print("Request Path: %s" %request_path)
 			path = 'Resources' + request_path
-			msg = ""
-			try:
+			if(request_path == '/favicon.ico'):
+				print("favicon.ico request")
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				client_socket.send('Content-Length: 318\r\n')
+				client_socket.send('Connection: close\r\n')
+				client_socket.send('Content-Type: image/x-icon\r\n\r\n')
+				path = 'static' + request_path
 				File = open(path, 'rb')
-				msg += self.get_response_header(http_version, "200 OK")
-				msg += File.read()
-				File.close()
-			except Exception as e:
-				path = 'Resources/error.html'
-				File = open(path, 'rb')
-				msg += self.get_response_header(http_version, "ERROR 404! FILE NOT FOUND")
-				msg += File.read()
-				File.close()
+				msg = File.read()
+				client_socket.send(msg)
+			else:
+				msg = ""
+				try:
+					File = open(path, 'rb')
+					msg += self.get_response_header(http_version, "200 OK")
+					msg += File.read()
+					File.close()
+				except Exception as e:
+					path = 'Resources/error.html'
+					File = open(path, 'rb')
+					msg += self.get_response_header(http_version, "ERROR 404! FILE NOT FOUND")
+					msg += File.read()
+					File.close()
 
-			client_socket.send(msg)
+				client_socket.send(msg)
 
 
 class Gui():
