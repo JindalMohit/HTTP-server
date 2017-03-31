@@ -6,13 +6,19 @@
 import socket
 import signal
 import sys
+import subprocess
 import threading
 from threading import Thread
+import cgi, cgitb
+import cStringIO
+from cStringIO import StringIO
+
 
 class Server(object):
 	"""doc string for the server"""
 	def __init__(self):
 		self.host = '172.25.14.62'
+		# self.host = '127.0.0.1'
 		self.port = 8888
 
 	def activate_server(self):
@@ -105,9 +111,44 @@ class Server(object):
 			except Exception as e:
 				print e
 				data = ""
-			print("Data received: \n", data)
-			msg = "HTTP/1.1 200 OK\r\n\nThanks for connecting."
-			client_socket.send(msg)
+			print 'Data received: \n', data
+			path = '/usr/lib' + request_path
+			try:
+				"""print 'PAY ATTENTION TO HEADERS:'
+				print client_data.split('\r\n\r\n')[0]
+				print 'END'"""
+				data2 = StringIO(data)
+				form = cgi.FieldStorage(fp=data2, headers=client_data.split('\r\n\r\n')[0], environ={'REQUEST_METHOD':'POST'}) 
+				# Get data from fields
+				first_name = form.getvalue('first_name')
+				last_name  = form.getvalue('last_name')
+				print 'first name= ', first_name
+				print 'last name= ', last_name
+
+				"""msg = "HTTP/1.1 200 OK\r\n\nThanks for connecting."
+				client_socket.send(msg) """
+				msg = "HTTP/1.1 200 OK\r\n\n"
+				#msg += "Content-type:text/html\r\n\r\n"
+				msg += "<!DOCTYPE html>"
+				msg += "<html>"
+				msg += "<head>"
+				msg += "<title>Hello - Second CGI Program</title>"
+				msg += "</head>"
+				msg += "<body>"
+				msg += "<h2>Hello %s %s</h2>" % (first_name, last_name)
+				msg += "</body>"
+				msg += "</html>"
+				client_socket.send(msg)
+				print 'working1'
+			except Exception as e:
+				path = 'Resources/error.html'
+				File = open(path, 'rb')
+				msg += 'HTTP/1.1 404 ERROR\r\n'
+				msg += File.read()
+				File.close()
+				print 'working2'
+				client_socket.send(msg)
+			
 
 s = Server()
 s.activate_server()
