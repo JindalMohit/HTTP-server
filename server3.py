@@ -12,7 +12,9 @@ from threading import Thread
 import cgi, cgitb
 import cStringIO
 from cStringIO import StringIO
-
+import mysql.connector
+from mysql.connector import errorcode
+import getpass
 
 class Server(object):
 	"""doc string for the server"""
@@ -34,7 +36,6 @@ class Server(object):
 		print("Server successfully acquired the socket with port:", self.port)
 		print("Press ctrl+c to close the server.\n")
 		# handle this keyboard_interrupt
-		self.listen_client()
 
 	def listen_client(self):
 		# start TCP listen
@@ -74,8 +75,6 @@ class Server(object):
 				request_path = '/index.html'
 			path = 'Resources' + request_path
 			file_type = request_path.split('.')[1]
-			if(file_type == 'php'):
-				path = '/var/www/html' + request_path
 			if(request_path == '/favicon.ico'):
 				print("favicon.ico request")
 				client_socket.send('HTTP/1.1 200 OK\r\n')
@@ -91,7 +90,10 @@ class Server(object):
 				try:
 					File = open(path, 'rb')
 					msg += 'HTTP/1.1 200 OK\r\n'
+					msg += File.read()
+					File.close()
 				except Exception as e:
+					print e
 					path = 'Resources/error.html'
 					File = open(path, 'rb')
 					msg += 'HTTP/1.1 404 ERROR\r\n'
@@ -99,8 +101,8 @@ class Server(object):
 					File.close()
 				if(file_type == 'jpg'):
 					msg += 'Content-Type: image/x-icon\r\n\r\n'
-				msg += File.read()
-				File.close()
+					msg += File.read()
+					File.close()
 				client_socket.send(msg)
 		# handle POST request
 		if(request_method == 'POST'):
@@ -111,7 +113,6 @@ class Server(object):
 			except Exception as e:
 				print e
 				data = ""
-			print 'Data received: \n', data
 			path = '/usr/lib' + request_path
 			try:
 				"""print 'PAY ATTENTION TO HEADERS:'
@@ -122,9 +123,18 @@ class Server(object):
 				# Get data from fields
 				first_name = form.getvalue('first_name')
 				last_name  = form.getvalue('last_name')
-				print 'first name= ', first_name
-				print 'last name= ', last_name
-
+				gender  = form.getvalue('gender')
+				# print 'work a'
+				add_user = ("INSERT INTO user "
+				"(first_name, last_name, gender) "
+				"VALUES (%s, %s, %s)")
+				# print 'work b'
+				data_user = (first_name, last_name, gender)
+                # Insert new user
+				cursor.execute(add_user, data_user)
+				# Make sure data is committed to the database
+				cnx.commit()
+				# print 'work c'
 				"""msg = "HTTP/1.1 200 OK\r\n\nThanks for connecting."
 				client_socket.send(msg) """
 				msg = "HTTP/1.1 200 OK\r\n\n"
@@ -135,20 +145,45 @@ class Server(object):
 				msg += "<title>Hello - Second CGI Program</title>"
 				msg += "</head>"
 				msg += "<body>"
-				msg += "<h2>Hello %s %s</h2>" % (first_name, last_name)
+				msg += "<h2>%s %s, your response has been recorded.</h2>" % (first_name, last_name)
 				msg += "</body>"
 				msg += "</html>"
+				# print 'work d'
 				client_socket.send(msg)
-				print 'working1'
+				# print 'working1'
 			except Exception as e:
+				print e
 				path = 'Resources/error.html'
 				File = open(path, 'rb')
 				msg += 'HTTP/1.1 404 ERROR\r\n'
 				msg += File.read()
 				File.close()
-				print 'working2'
+				# print 'working2'
 				client_socket.send(msg)
 			
 
+
 s = Server()
 s.activate_server()
+
+print('Connecting to database:')
+try:
+  password = getpass.getpass('Enter your mysql password: ')
+  cnx = mysql.connector.connect(user='root', password=password, database='My_http_server')
+  print("Successfully connected to database\n")
+except mysql.connector.Error as err:
+  if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+    print("Something is wrong with your user name or password")
+  elif err.errno == errorcode.ER_BAD_DB_ERROR:
+    print("Database does not exist")
+  else:
+    print(err)
+
+cursor = cnx.cursor()
+
+# Both server and database is set-up now
+# Start listening the client requests
+print("Ready to receive requests....")
+s.listen_client()
+cursor.close()
+cnx.close()
