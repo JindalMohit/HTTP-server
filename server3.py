@@ -15,12 +15,13 @@ from cStringIO import StringIO
 import mysql.connector
 from mysql.connector import errorcode
 import getpass
+import os
 
 class Server(object):
 	"""doc string for the server"""
 	def __init__(self):
-		self.host = '172.25.14.62'
-		# self.host = '127.0.0.1'
+		# self.host = '172.25.14.62'
+		self.host = '127.0.0.1'
 		self.port = 8888
 
 	def activate_server(self):
@@ -160,6 +161,58 @@ class Server(object):
 				File.close()
 				# print 'working2'
 				client_socket.send(msg)
+		#handle DELETE request
+		if(request_method == 'DELETE'):
+			if(request_path == '/'):
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				client_socket.send('You have not given any file name to delete.\nRequest discarded.')
+			else:
+				path = 'Temp' + request_path
+				print('Request path: ',request_path)
+				msg = ""
+				try:
+					os.remove(path)
+					msg = ""
+					msg += 'HTTP/1.1 404 ERROR\r\n'
+					path = 'Resources/del_success_msg.html'
+					File = open(path, 'rb')
+					msg += File.read()
+					File.close()
+					client_socket.send(msg)
+				except Exception as e:
+					if e.errno == 21:
+						try:
+							shutil.rmtree(path)
+						except Exception as e:
+							if e.errno == 2:
+								self.error_404(client_socket)
+							else:
+								print e
+								self.error_500(client_socket)
+					elif e.errno == 2:
+						self.error_404(client_socket)
+					else:
+						print e
+						self.error_500(client_socket)
+
+
+	def error_404(self, client_socket):
+		msg = ""
+		path = 'Resources/error.html'
+		File = open(path, 'rb')
+		msg += 'HTTP/1.1 404 ERROR\r\n'
+		msg += File.read()
+		File.close()
+		client_socket.send(msg)
+
+	def error_500(self, client_socket):
+		msg = ""
+		path = 'Resources/error500.html'
+		File = open(path, 'rb')
+		msg += 'HTTP/1.1 500 Internal Server Error\r\n'
+		msg += File.read()
+		File.close()
+		client_socket.send(msg)
 			
 
 
