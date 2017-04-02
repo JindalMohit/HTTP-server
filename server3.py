@@ -2,7 +2,6 @@
 # HTTP server using object-oriented approach
 # without gui : it is creating confusion and errors
 # also implement response_headers properly
-# also implement POST request by to-night
 import socket
 import signal
 import sys
@@ -16,12 +15,14 @@ import mysql.connector
 from mysql.connector import errorcode
 import getpass
 import os
+import time
+from email.utils import formatdate
 
 class Server(object):
 	"""doc string for the server"""
 	def __init__(self):
-		# self.host = '172.25.14.62'
-		self.host = '127.0.0.1'
+		self.host = '172.25.14.62'
+		# self.host = '127.0.0.1'
 		self.port = 8888
 
 	def activate_server(self):
@@ -49,12 +50,23 @@ class Server(object):
 			# accept the TCP connection
 			c_socket, c_addr = self.socket.accept()
 			print("Got a connection from ", c_addr)
-			# extrac the information data from the client socket
+			# extract the information data from the client socket
 			data = c_socket.recv(1024)
 			# 1024 byte size data is received
 			self.handle_request(c_socket, data)
 			print("")
 			c_socket.close()
+
+	# general response headers for all types of request
+	def send_gen_headers(self, client_socket, length):
+		localtime = formatdate(timeval=None, localtime=False, usegmt=True)
+		date_header = 'Date: ' + str(localtime) + '\r\n'
+		len_header = 'Content-Length: ' + str(length) + '\r\n'
+		#send response headers
+		client_socket.send(date_header)
+		client_socket.send(len_header)
+		client_socket.send('Server: Python2.7\r\n')
+		client_socket.send('Connection: close\r\n')
 
 	def handle_request(self, client_socket, client_data):
 		msg = ""
@@ -77,34 +89,87 @@ class Server(object):
 			path = 'Resources' + request_path
 			file_type = request_path.split('.')[1]
 			if(request_path == '/favicon.ico'):
-				print("favicon.ico request")
 				client_socket.send('HTTP/1.1 200 OK\r\n')
-				client_socket.send('Content-Length: 318\r\n')
-				client_socket.send('Connection: close\r\n')
+				self.send_gen_headers(client_socket, 318)
 				client_socket.send('Content-Type: image/x-icon\r\n\r\n')
 				File = open(path, 'rb')
 				msg = File.read()
+				File.close()
+				client_socket.send(msg)
+			if(file_type == 'jpg'):
+				File = open(path, 'rb')
+				msg = File.read()
+				length = str(len(msg))
+				File.close()
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				self.send_gen_headers(client_socket, length)
+				client_socket.send('Content-Type: image/x-icon\r\n\r\n')
 				client_socket.send(msg)
 			else:
-				print('Request path: ',request_path)
-				msg = ""
 				try:
 					File = open(path, 'rb')
-					msg += 'HTTP/1.1 200 OK\r\n'
-					msg += File.read()
+					msg = File.read()
 					File.close()
+					client_socket.send('HTTP/1.1 200 OK\r\n')
+					length = str(len(msg))
+					self.send_gen_headers(client_socket, length)
+					client_socket.send('Content-Type: text/html\r\n\r\n')
+					client_socket.send(msg)
 				except Exception as e:
 					print e
 					path = 'Resources/error.html'
 					File = open(path, 'rb')
-					msg += 'HTTP/1.1 404 ERROR\r\n'
-					msg += File.read()
+					msg = File.read()
 					File.close()
-				if(file_type == 'jpg'):
-					msg += 'Content-Type: image/x-icon\r\n\r\n'
-					msg += File.read()
+					client_socket.send('HTTP/1.1 404 ERROR\r\n')
+					length = str(len(msg))
+					self.send_gen_headers(client_socket, length)
+					client_socket.send('Content-Type: text/html\r\n\r\n')
+					client_socket.send(msg)
+		# handle HEAD request
+		if(request_method == 'HEAD'):
+			if(request_path == '/'):
+				request_path = '/index.html'
+			path = 'Resources' + request_path
+			file_type = request_path.split('.')[1]
+			if(request_path == '/favicon.ico'):
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				self.send_gen_headers(client_socket, length)
+				client_socket.send('Content-Type: image/x-icon\r\n\r\n')
+				File = open(path, 'rb')
+				msg = File.read()
+				# client_socket.send(msg)
+				File.close()
+			if(file_type == 'jpg'):
+				File = open(path, 'rb')
+				msg = File.read()
+				length = str(len(msg))
+				File.close()
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				self.send_gen_headers(client_socket, length)
+				client_socket.send('Content-Type: image/x-icon\r\n\r\n')
+				# client_socket.send(msg)
+			else:
+				try:
+					File = open(path, 'rb')
+					msg = File.read()
 					File.close()
-				client_socket.send(msg)
+					client_socket.send('HTTP/1.1 200 OK\r\n')
+					length = str(len(msg))
+					self.send_gen_headers(client_socket, length)
+					client_socket.send('Content-Type: text/html\r\n\r\n')
+					# client_socket.send(msg)
+				except Exception as e:
+					print e
+					path = 'Resources/error.html'
+					File = open(path, 'rb')
+					msg = File.read()
+					File.close()
+					client_socket.send('HTTP/1.1 404 ERROR\r\n')
+					length = str(len(msg))
+					self.send_gen_headers(client_socket, length)
+					client_socket.send('Content-Type: text/html\r\n\r\n')
+					client_socket.send(msg)
 		# handle POST request
 		if(request_method == 'POST'):
 			#print(client_data.decode('ascii'))
@@ -138,9 +203,7 @@ class Server(object):
 				# print 'work c'
 				"""msg = "HTTP/1.1 200 OK\r\n\nThanks for connecting."
 				client_socket.send(msg) """
-				msg = "HTTP/1.1 200 OK\r\n\n"
-				#msg += "Content-type:text/html\r\n\r\n"
-				msg += "<!DOCTYPE html>"
+				msg = "<!DOCTYPE html>"
 				msg += "<html>"
 				msg += "<head>"
 				msg += "<title>Hello - Second CGI Program</title>"
@@ -150,6 +213,10 @@ class Server(object):
 				msg += "</body>"
 				msg += "</html>"
 				# print 'work d'
+				client_socket.send('HTTP/1.1 200 OK\r\n')
+				length = str(len(msg))
+				self.send_gen_headers(client_socket, length)
+				client_socket.send('Content-Type: text/html\r\n\r\n')
 				client_socket.send(msg)
 				# print 'working1'
 			except Exception as e:
@@ -164,8 +231,12 @@ class Server(object):
 		#handle DELETE request
 		if(request_method == 'DELETE'):
 			if(request_path == '/'):
-				client_socket.send('HTTP/1.1 200 OK\r\n')
-				client_socket.send('You have not given any file name to delete.\nRequest discarded.')
+				client_socket.send('HTTP/1.1 404 NOT FOUND\r\n')
+				path = 'Resources/url_incomplete.html'
+				File = open(path, 'rb')
+				msg = File.read()
+				File.close()
+				client_socket.send(msg)
 			else:
 				path = 'Temp' + request_path
 				print('Request path: ',request_path)
