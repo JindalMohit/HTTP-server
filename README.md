@@ -16,8 +16,8 @@
   Execute the showdatabase.py file.
   
 ## Server is successfully tested in following environment:
- > OS: Ubuntu 16.04
- > Python: Python2.7
- > MySQL: YES
- > CGI: YES
- > Client: Chrome browser, Postman extension, Several other PC's.
+ * OS: Ubuntu 16.04
+ * Python: Python2.7
+ * MySQL: YES
+ * CGI: YES
+ * Client: Chrome browser, Postman extension, Several other PC's.
